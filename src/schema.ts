@@ -17,9 +17,9 @@ export class Weather extends Schema.Class<Weather>("Weather")({
 
     main: Schema.Struct({
         temp: Schema.Number,
-        feelsLike: Schema.Number,
-        tempMin: Schema.Number,
-        tempMax: Schema.Number,
+        feels_like: Schema.Number,
+        temp_min: Schema.Number,
+        temp_max: Schema.Number,
         humidity: Schema.Number,
         pressure: Schema.Number
     }),

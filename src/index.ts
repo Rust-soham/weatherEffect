@@ -1,5 +1,76 @@
-import { Effect, Console } from "effect";
+import { Console, Effect, Schema, Config, Redacted, Data } from "effect";
+import { FetchHttpClient, HttpClient } from "@effect/platform";
+import { NodeContext, NodeRuntime } from "@effect/platform-node";
+import { Weather } from "./schema.js";
+import { Prompt } from "@effect/cli";
+import { effect } from "effect/Layer";
 
-const program = Console.log("Hello World");
+export class ApiFetchError extends Data.TaggedError('ApiFetchError')<{
+    message: string,
+    status: number,
+}> {}
 
-Effect.runSync(program);
+const getWeather = (location: string) => Effect.gen(function* () {
+    const apiKey = yield* Config.redacted("OPENWEATHER_API_KEY");
+    const response = yield* HttpClient.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${Redacted.value(apiKey)}&units=metric`
+    );
+
+    if(response.status < 200 || response.status > 300) {
+        const body = yield* response.text.pipe(
+            Effect.catchAll((error) => Effect.succeed("unreadable body"))
+        )
+
+        return yield* new ApiFetchError({
+            message: body,
+            status: response.status
+        })
+    }
+
+    const json = yield* response.json;
+
+    return yield* Schema.decodeUnknown(Weather)(json)
+
+});
+
+
+const program = Effect.gen(function* () {
+  const input = yield* Prompt.text({ message: "Enter your location: " });
+  const weather = yield* getWeather(input);
+
+  const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
+  yield* Console.log(`
+  ${bold("Location:")} ${weather.name}
+  ${bold("Country:")} ${weather.sys.country}
+  ${bold("Coordinates:")} ${weather.coord.lat},${weather.coord.lon}
+  ${bold("Weather:")} ${weather.weather[0].main} (${weather.weather[0].description})
+  ${bold("Temperature:")} ${weather.main.temp}
+  ${bold("Max Temperature:")} ${weather.main.tempMax}
+  ${bold("Min Temperature:")} ${weather.main.tempMin}
+  ${bold("Humidity:")} ${weather.main.humidity}
+  ${bold("Pressure:")} ${weather.main.pressure}
+  ${bold("Wind Speed:")} ${weather.wind.speed}
+  ${bold("Wind Degree:")} ${weather.wind.deg}
+`);
+}).pipe(Effect.catchTags({
+    ConfigError: (error) =>Effect.succeed("Config got fucked"),
+    ApiFetchError: (error) => Effect.succeed("Api fetch got fucked"),
+    ParseError: (error) => Effect.succeed("parsing got fucked"),
+    
+}), Effect.catchAll((error) => Console.log(`unknown error: ${error}`))
+)
+
+
+
+program.pipe(
+    Effect.provide(NodeContext.layer),
+    Effect.provide(FetchHttpClient.layer),
+    NodeRuntime.runMain
+)
+
+
+
+
+
+
+

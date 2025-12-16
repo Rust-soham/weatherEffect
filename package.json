@@ -12,9 +12,13 @@
   "license": "ISC",
   "packageManager": "pnpm@10.25.0",
   "devDependencies": {
+    "@effect/language-service": "^0.62.3",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@effect/cli": "^0.72.1",
+    "@effect/platform": "^0.93.8",
+    "@effect/platform-node": "^0.103.0",
     "effect": "^3.19.12"
   }
 }

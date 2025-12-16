@@ -3,7 +3,6 @@ import { FetchHttpClient, HttpClient } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Weather } from "./schema.js";
 import { Prompt } from "@effect/cli";
-import { effect } from "effect/Layer";
 
 export class ApiFetchError extends Data.TaggedError('ApiFetchError')<{
     message: string,
